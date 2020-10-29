@@ -99,13 +99,13 @@ class CPU:
             # Set the value of a register to an integer.
             if command == LDI:
                 self.reg[operand_a] = operand_b
-                # 3 commands to reach next PRN (ln. 73-75)
+                # 3 commands to reach next instructions, PRN (ln. 73-75)
                 self.pc += 3
 
             # Print numeric value stored in the given register.
             elif command == PRN:
                 print(self.reg[operand_a])
-                self.pc += 2  # 2 commands to reach HLT (ln. 76-77)
+                self.pc += 2  # 2 commands to reach next, HLT (ln. 76-77)
 
             # Halt the CPU (and exit the emulator).
             elif command == HLT:
