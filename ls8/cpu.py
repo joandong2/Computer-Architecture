@@ -1,5 +1,7 @@
 """CPU functionality."""
 
+# python3 ls8.py examples/mult.ls8
+
 import sys
 
 
@@ -19,15 +21,26 @@ class CPU:
 
         # For now, we've just hardcoded a program:
 
-        program = [
-            # From print8.ls8
-            0b10000010,  # LDI R0,8
-            0b00000000,
-            0b00001000,
-            0b01000111,  # PRN R0
-            0b00000000,
-            0b00000001,  # HLT
-        ]
+        # program = [
+        #     # From print8.ls8
+        #     0b10000010,  # LDI R0,8
+        #     0b00000000,
+        #     0b00001000,
+        #     0b01000111,  # PRN R0
+        #     0b00000000,
+        #     0b00000001,  # HLT
+        # ]
+
+        program = []
+
+        with open(sys.argv[1]) as f:
+            for line in f:
+                line_split = line.split("#")
+                command = line_split[0].strip()
+                if command == '':
+                    continue
+                command_num = int(command, 2)
+                program.append(command_num)
 
         for instruction in program:
             self.ram[address] = instruction
@@ -84,6 +97,7 @@ class CPU:
         LDI = 130  # 10000010
         PRN = 71  # 01000111
         HLT = 1  # 00000001
+        MUL = 162  # 10100010
 
         running = True
         while running:  # computer always running
@@ -107,7 +121,12 @@ class CPU:
                 print(self.reg[operand_a])
                 self.pc += 2  # 2 commands to reach next, HLT (ln. 76-77)
 
-            # Halt the CPU (and exit the emulator).
+            # Multiply the values in two registers together and store the result in registerA.
+            elif command == MUL:
+                self.reg[operand_a] = self.reg[operand_a] * self.reg[operand_b]
+                self.pc += 3
+
+                # Halt the CPU (and exit the emulator).
             elif command == HLT:
                 running = False
                 self.pc += 1
