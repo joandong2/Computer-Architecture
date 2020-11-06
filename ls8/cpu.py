@@ -13,6 +13,7 @@ class CPU:
         self.reg = [0] * 8  # registers
         self.ram = [0] * 256  # ram/bytes of memory
         self.pc = 0  # program counter, starts at 0
+        self.sp = 7  # R7 is reserved as the stack pointer (SP)
 
     def load(self):
         """Load a program into memory."""
@@ -30,9 +31,9 @@ class CPU:
         #     0b00000000,
         #     0b00000001,  # HLT
         # ]
+        # program = []
 
-        program = []
-
+        memory_address = 0
         with open(sys.argv[1]) as f:
             for line in f:
                 line_split = line.split("#")
@@ -40,9 +41,11 @@ class CPU:
                 if command == '':
                     continue
                 command_num = int(command, 2)
-                program.append(command_num)
+                # program.append(command_num)
+                self.ram[memory_address] = command_num
+                memory_address += 1
 
-        for instruction in program:
+        for instruction in self.ram:
             self.ram[address] = instruction
             address += 1
 
@@ -56,10 +59,10 @@ class CPU:
             raise Exception("Unsupported ALU operation")
 
     def ram_read(self, address):
-        return self.ram[address]
+        return self.ram[address]  # ex: self.ram[255]
 
     def ram_write(self, address, value):
-        self.ram[address] = value
+        self.ram[address] = value  # ex: self.ram[255] = 1
 
     def trace(self):
         """
@@ -81,15 +84,6 @@ class CPU:
 
         print()
 
-    # INSTRUCTIONS
-
-    # 10000010 # LDI R0,8   ASSIGN INTEGER TO REGISTER, so R0 == self.reg[0], assign 8 which is instruction ln.75
-    # 00000000              self.reg[0]
-    # 00001000              self.reg[0] = 8
-    # 01000111 # PRN R0     PRINT R0 == self.reg[0]
-    # 00000000              self.reg[0]
-    # 00000001 # HLT        HALT
-
     def run(self):
         """Run the CPU."""
 
@@ -98,35 +92,69 @@ class CPU:
         PRN = 71  # 01000111
         HLT = 1  # 00000001
         MUL = 162  # 10100010
+        PUSH = 69  # 01000101
+        POP = 70  # 01000110
+        RET = 17  # 00010001
+        CALL = 80  # 01010000
+        ADD = 160  # 10100000
 
         running = True
         while running:  # computer always running
 
             # point to the first instructions in ram
             command = self.ram[self.pc]
-            # Using ram_read(), read the bytes at PC+1 and PC+2 from RAM into variables operand_a and operand_b in case the instruction needs them.
-            # points to the first registry
             operand_a = self.ram_read(self.pc + 1)
-            # points to 8 in our instructions, (ln. 75)
             operand_b = self.ram_read(self.pc + 2)
 
             # Set the value of a register to an integer.
             if command == LDI:
                 self.reg[operand_a] = operand_b
-                # 3 commands to reach next instructions, PRN (ln. 73-75)
                 self.pc += 3
 
             # Print numeric value stored in the given register.
             elif command == PRN:
                 print(self.reg[operand_a])
-                self.pc += 2  # 2 commands to reach next, HLT (ln. 76-77)
+                self.pc += 2
 
-            # Multiply the values in two registers together and store the result in registerA.
+            # needed for LN.26 in call.ls8
+            elif command == ADD:
+                self.alu("ADD", operand_a, operand_b)
+                self.pc += 3
+
             elif command == MUL:
                 self.reg[operand_a] = self.reg[operand_a] * self.reg[operand_b]
                 self.pc += 3
 
-                # Halt the CPU (and exit the emulator).
+            elif command == PUSH:
+                # decrement the SP
+                self.reg[self.sp] -= 1
+
+                #get_num = self.ram_read(self.pc + 1)
+                value = self.reg[operand_a]
+
+                current_stack = self.reg[self.sp]
+                self.ram[current_stack] = value
+                self.pc += 2
+
+            elif command == POP:
+                #get_num = self.ram_read(self.pc + 1)
+                self.reg[operand_a] = self.ram[self.reg[self.sp]]
+
+                # add to SP value
+                self.reg[self.sp] += 1
+                self.pc += 2
+
+            elif command == CALL:
+                self.reg[self.sp] -= 1
+                self.ram_write(self.reg[self.sp], self.pc + 2)
+                self.pc = self.reg[operand_a]
+                # print('hello')
+
+            elif command == RET:
+                self.pc = self.ram_read(self.reg[self.sp])
+                self.reg[self.sp] += 1
+
+            # Halt the CPU (and exit the emulator).
             elif command == HLT:
                 running = False
                 self.pc += 1
