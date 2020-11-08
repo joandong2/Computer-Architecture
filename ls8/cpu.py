@@ -14,6 +14,7 @@ class CPU:
         self.ram = [0] * 256  # ram/bytes of memory
         self.pc = 0  # program counter, starts at 0
         self.sp = 7  # R7 is reserved as the stack pointer (SP)
+        self.flag = 0
 
     def load(self):
         """Load a program into memory."""
@@ -54,6 +55,15 @@ class CPU:
 
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
+
+        elif op == "MUL":
+            self.reg[reg_a] = self.reg[reg_a] * self.reg[reg_b]
+
+        elif op == "CMP":
+            if self.reg[reg_a] == self.reg[reg_b]:
+                self.flag = 1
+            else:
+                self.flag = 0
         # elif op == "SUB": etc
         else:
             raise Exception("Unsupported ALU operation")
@@ -98,6 +108,11 @@ class CPU:
         CALL = 80  # 01010000
         ADD = 160  # 10100000
 
+        CMP = 167  # 10100111
+        JEQ = 85  # 01010101
+        JNE = 86  # 01010110
+        JMP = 84  # 01010100
+
         running = True
         while running:  # computer always running
 
@@ -122,7 +137,7 @@ class CPU:
                 self.pc += 3
 
             elif command == MUL:
-                self.reg[operand_a] = self.reg[operand_a] * self.reg[operand_b]
+                self.alu("MUL", operand_a, operand_b)
                 self.pc += 3
 
             elif command == PUSH:
@@ -158,3 +173,22 @@ class CPU:
             elif command == HLT:
                 running = False
                 self.pc += 1
+
+            elif command == CMP:
+                self.alu("CMP", operand_a, operand_b)
+                self.pc += 3
+
+            elif command == JMP:
+                self.pc = self.reg[operand_a]
+
+            elif command == JEQ:
+                if self.flag == 1:
+                    self.pc = self.reg[operand_a]
+                else:
+                    self.pc += 2
+
+            elif command == JNE:
+                if self.flag == 0:
+                    self.pc = self.reg[operand_a]
+                else:
+                    self.pc += 2
